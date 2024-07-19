@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:machinetest/Members.dart';
 import 'package:machinetest/memberdetail.dart';
+import 'package:machinetest/service/service.dart';
+import 'package:machinetest/model/model.dart';
 
 class Uiscreen extends StatefulWidget {
   const Uiscreen({Key? key}) : super(key: key);
@@ -11,24 +13,28 @@ class Uiscreen extends StatefulWidget {
 }
 
 class _UiscreenState extends State<Uiscreen> {
-  // Index of the currently selected bottom navigation item
   int _selectedIndex = 3;
+  late Future<List<User>> _futureUsers;
+  final ApiService _apiService = ApiService();
 
-  // Method to handle bottom navigation item taps
+  @override
+  void initState() {
+    super.initState();
+    _futureUsers = _apiService.fetchUsers();
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  // Method to navigate to the MemberDetailPage
-  void _navigateToMemberDetail(BuildContext context, String imagePath, String name) {
+  void _navigateToMemberDetail(BuildContext context, User user) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => MemberDetailPage(
-          imagePath: imagePath,
-          name: name,
+          user: user,
           selectedIndex: _selectedIndex,
           onItemTapped: _onItemTapped,
         ),
@@ -38,38 +44,32 @@ class _UiscreenState extends State<Uiscreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen width and height for responsive design
     double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
 
-    // Responsive padding based on screen width
     EdgeInsets _padding() {
       if (screenWidth > 600) {
-        return EdgeInsets.all(32.0); // Larger padding for larger screens
+        return EdgeInsets.all(32.0);
       } else {
-        return EdgeInsets.all(16.0); // Smaller padding for smaller screens
+        return EdgeInsets.all(16.0);
       }
     }
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
-        padding: _padding(), // Apply responsive padding
+        padding: _padding(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Back button with circular shape
                 Material(
                   shape: CircleBorder(),
                   elevation: 4.0,
                   child: InkWell(
                     customBorder: CircleBorder(),
-                    onTap: () {
-                      // Add your onPressed logic here
-                    },
+                    onTap: () {},
                     child: Container(
                       width: 40,
                       height: 40,
@@ -85,7 +85,6 @@ class _UiscreenState extends State<Uiscreen> {
                     ),
                   ),
                 ),
-                // Title text
                 Text(
                   "Hello Aswathy",
                   style: TextStyle(
@@ -94,11 +93,10 @@ class _UiscreenState extends State<Uiscreen> {
                     fontSize: 15,
                   ),
                 ),
-                SizedBox(width: 48), // Spacer
+                SizedBox(width: 48),
               ],
             ),
             SizedBox(height: 20),
-            // Main heading text
             Text(
               'Explore the\nBeautiful Members',
               style: TextStyle(
@@ -109,62 +107,36 @@ class _UiscreenState extends State<Uiscreen> {
             ),
             SizedBox(height: 20),
             Expanded(
-              child: GridView.count(
-                crossAxisCount: screenWidth > 600 ? 4 : 2, // Responsive grid layout
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  // Member cards with tap gesture to navigate
-                  GestureDetector(
-                    onTap: () => _navigateToMemberDetail(context, 'assets/img_1.png', 'Jordyn Koelpin'),
-                    child: MemberCard(
-                      imagePath: 'assets/img_1.png',
-                      name: 'Jordyn Koelpin',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img_13.png',
-                      name: 'Amith Arora',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img_11.png',
-                      name: 'Deepak Rajesh',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img_10.png',
-                      name: 'Amith Arora',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img_8.png',
-                      name: 'Deepak Rajesh',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img_9.png',
-                      name: 'Amith Arora',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img_12.png',
-                      name: 'Deepak Rajesh',
-                    ),
-                  ),
-                  GestureDetector(
-                    child: MemberCard(
-                      imagePath: 'assets/img.png',
-                      name: 'Amith Arora',
-                    ),
-                  ),
-                ],
+              child: FutureBuilder<List<User>>(
+                future: _futureUsers,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Center(child: Text('No users found'));
+                  } else {
+                    return GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: screenWidth > 600 ? 4 : 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: snapshot.data!.length,
+                      itemBuilder: (context, index) {
+                        User user = snapshot.data![index];
+                        return GestureDetector(
+                          onTap: () => _navigateToMemberDetail(context, user),
+                          child: MemberCard(
+                            imagePath: user.photo,
+                            name: user.name,
+                          ),
+                        );
+                      },
+                    );
+                  }
+                },
               ),
             ),
           ],
@@ -177,7 +149,7 @@ class _UiscreenState extends State<Uiscreen> {
     );
   }
 }
-//custombottomnavigation starts here...
+
 class CustomBottomNavigationBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -202,11 +174,9 @@ class CustomBottomNavigationBar extends StatelessWidget {
           ),
         ],
       ),
-      //icons are added in row manner
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // Navigation items
           _buildNavItem(Icons.explore, 0),
           _buildNavItem(Icons.notifications, 1),
           _buildNavItem(Icons.bookmark, 2),
@@ -216,7 +186,6 @@ class CustomBottomNavigationBar extends StatelessWidget {
     );
   }
 
-  // Method to build each navigation item
   Widget _buildNavItem(IconData icon, int index) {
     bool isSelected = index == selectedIndex;
     return GestureDetector(
@@ -224,23 +193,21 @@ class CustomBottomNavigationBar extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Drop-down icon for selected item
           if (isSelected)
             Positioned(
-              top: -10, // position of the drop-down icon
+              top: -10,
               child: Icon(
                 Icons.arrow_drop_down,
                 color: CupertinoColors.activeGreen,
-                size: 24, // Drop-down icon size
+                size: 24,
               ),
             ),
-          // Main navigation icon
           Container(
-            padding: EdgeInsets.all(8), // Adjusting padding for the icon
+            padding: EdgeInsets.all(8),
             child: Icon(
               icon,
               color: isSelected ? CupertinoColors.activeGreen : Colors.grey,
-              size: 24, // Icon size
+              size: 24,
             ),
           ),
         ],

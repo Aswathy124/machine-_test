@@ -1,51 +1,64 @@
 import 'package:flutter/material.dart';
 
 class MemberCard extends StatelessWidget {
-  // Path to the image asset
   final String imagePath;
-
-  // Name of the member
   final String name;
 
-  // Constructor for the MemberCard class
   const MemberCard({required this.imagePath, required this.name});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      // Define the shape of the card with rounded corners
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.0),
       ),
-      // Set the elevation (shadow) of the card
-      elevation: 4,
-      color: Colors.white, // Set the background color to white
+      elevation: 4.0,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            // Space for image
+          Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                imagePath, // Path to the image asset
-                height: 120, // Height of image
-                width: double.infinity, // Image width to stretch the card width
-                fit: BoxFit.cover, // Cover the entire space
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+              child: Image.network(
+                imagePath,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                  if (loadingProgress == null) {
+                    return child;
+                  } else {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                            : null,
+                      ),
+                    );
+                  }
+                },
+                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, color: Colors.red),
+                        Text('Image not found', style: TextStyle(color: Colors.red)),
+                        SizedBox(height: 8),
+                        Text('URL: $imagePath'),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),
-          // Padding around the text
           Padding(
-            padding: const EdgeInsets.all(8.0), // Space around the text
+            padding: const EdgeInsets.all(8.0),
             child: Text(
-              name, // Member's name
+              name,
               style: TextStyle(
-                fontWeight: FontWeight.bold, // Make the text bold
-                color: Colors.black, // Set the text color
-                fontSize: 15, // Set the font size
+                fontWeight: FontWeight.bold,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
